@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบลงทะเบียนเข้าร่วมงาน กีฬาสี ILET</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ilet: {
+              DEFAULT: '#AC3520',
+              hover: '#8C2817',
+              light: '#FCF3F2',
+              border: '#E8A599',
+              darkbg: '#121212',
+              darkcard: '#1E1E1E',
+              darkborder: '#2A2A2A'
+            }
+          },
+          fontFamily: { sans: ['Kanit', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Kanit', sans-serif; }
+    * { transition: background-color 0.2s ease, border-color 0.2s ease; }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-[#121212] dark:text-slate-100 antialiased selection:bg-[#AC3520] selection:text-white">
+
+  <div id="app" class="min-h-screen flex flex-col justify-between">
+
+    <!-- Toast -->
+    <div v-if="toast.show"
+         class="fixed top-5 right-5 z-[60] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl text-white transform transition-all duration-300"
+         :class="toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'">
+      <i :class="toast.type === 'success' ? 'fa-solid fa-circle-check text-xl' : 'fa-solid fa-triangle-exclamation text-xl'"></i>
+      <div class="text-sm font-medium">{{ toast.message }}</div>
+      <button @click="toast.show = false" class="ml-auto text-white/80 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/90 dark:bg-[#1E1E1E]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+
+        <div class="flex items-center gap-3 cursor-pointer" @click="currentTab = 'register'">
+          <div class="w-12 h-12 rounded-2xl bg-[#AC3520] text-white flex items-center justify-center font-bold text-2xl shadow-lg shadow-[#AC3520]/30 transform hover:scale-105 transition-transform">
+            <i class="fa-solid fa-trophy text-white text-xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-xl tracking-tight text-[#AC3520] dark:text-[#E8A599]">ILET</span>
+              <span class="text-xs bg-[#AC3520]/10 dark:bg-[#AC3520]/30 text-[#AC3520] dark:text-red-300 px-2.5 py-0.5 rounded-full font-semibold">SPORTS DAY 2026</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">ระบบลงทะเบียนเข้าร่วมงานกีฬาสี</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+          <div class="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl flex items-center border border-slate-200 dark:border-slate-700">
+            <button @click="currentTab = 'register'"
+                    class="px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all"
+                    :class="currentTab === 'register' ? 'bg-[#AC3520] text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'">
+              <i class="fa-solid fa-id-card"></i>
+              <span>ลงทะเบียน</span>
+            </button>
+            <button @click="openBackofficeTab()"
+                    class="px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all"
+                    :class="currentTab === 'backoffice' ? 'bg-[#AC3520] text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>หลังบ้าน Admin</span>
+            </button>
+          </div>
+
+          <button @click="toggleDarkMode"
+                  class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  :title="isDarkMode ? 'เปลี่ยนเป็น Light Mode' : 'เปลี่ยนเป็น Dark Mode'">
+            <i :class="isDarkMode ? 'fa-solid fa-sun text-lg' : 'fa-solid fa-moon text-lg'"></i>
+          </button>
+
+          <div v-if="isLoggedIn" class="hidden md:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
+            <div class="w-8 h-8 rounded-full bg-[#AC3520]/20 text-[#AC3520] dark:text-red-300 flex items-center justify-center font-bold text-xs">
+              {{ loggedInEmail.substring(0,2).toUpperCase() }}
+            </div>
+            <div class="text-xs">
+              <p class="font-medium truncate max-w-[140px] text-slate-700 dark:text-slate-200">{{ loggedInEmail }}</p>
+              <button @click="logout" class="text-red-500 hover:underline text-[10px]">ออกจากระบบ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+
+      <!-- ========================================== -->
+      <!-- TAB 1: REGISTRATION                        -->
+      <!-- ========================================== -->
+      <div v-if="currentTab === 'register'" class="space-y-8">
+
+        <!-- Event banner -->
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#AC3520] via-[#8C2817] to-[#5c1a0e] text-white shadow-2xl p-6 sm:p-8 md:p-10">
+          <div class="absolute -right-10 -bottom-10 opacity-10 text-[200px] font-black pointer-events-none">ILET</div>
+
+          <div class="relative z-10 grid md:grid-cols-3 gap-6 items-center">
+            <div class="md:col-span-2 space-y-4">
+              <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wide">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i> เปิดรับลงทะเบียนแล้ว
+              </div>
+              <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                งานกีฬาสี <span class="text-amber-300">ILET SPORTS DAY</span>
+              </h1>
+              <p class="text-red-100 text-sm sm:text-base font-light max-w-2xl">
+                ขอเชิญชวนนักศึกษาปัจจุบัน ศิษย์เก่า และบุคลากรเข้าร่วมงานเชื่อมความสัมพันธ์ ร่วมแข่งขันกีฬา อาหาร เครื่องดื่ม และกิจกรรมสุดพิเศษมากมาย
+              </p>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div class="flex items-start gap-3 bg-black/20 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                  <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 text-amber-300">
+                    <i class="fa-solid fa-location-dot text-lg"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs text-red-200 block">สถานที่จัดงาน</span>
+                    <span class="text-xs sm:text-sm font-semibold leading-tight block">ณ สวนสุภัทราแลนด์ 3143 ตำบลหนองละลอก อำเภอบ้านค่าย จังหวัดระยอง 21120</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-black/20 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                  <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 text-amber-300">
+                    <i class="fa-solid fa-clock text-lg"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs text-red-200 block">ระยะเวลาจัดงาน</span>
+                    <span class="text-sm sm:text-base font-semibold">18.00 น. - 00.00 น.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 text-center space-y-3">
+              <div class="w-16 h-16 mx-auto rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-bold text-2xl shadow-lg">
+                <i class="fa-solid fa-palette"></i>
+              </div>
+              <h3 class="font-bold text-lg">ธีมสีสุ่มอัตโนมัติ</h3>
+              <p class="text-xs text-red-100">
+                เมื่อลงทะเบียนเรียบร้อย ระบบจะสุ่มสีทีมของคุณอัตโนมัติ (<span class="text-sky-300 font-medium">สีฟ้า</span>, <span class="text-amber-300 font-medium">สีเหลือง</span>, <span class="text-emerald-300 font-medium">สีเขียว</span>, <span class="text-red-300 font-medium">สีแดง</span>) พร้อมออกการ์ดเชิญ Ticket Pass ทันที!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 1: LOGIN -->
+        <div v-if="!isLoggedIn" class="max-w-xl mx-auto bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200 dark:border-slate-800 transition-all">
+          <div class="text-center space-y-3 mb-6">
+            <div class="w-16 h-16 bg-[#AC3520]/10 text-[#AC3520] dark:bg-[#AC3520]/30 dark:text-red-300 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white">เข้าสู่ระบบด้วยอีเมลมหาลัย (KMUTNB)</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">กรุณาใช้อีเมลสถาบันเพื่อเริ่มต้นกระบวนการลงทะเบียนเข้าร่วมงาน</p>
+          </div>
+
+          <form @submit.prevent="handleLogin" class="space-y-5">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+                อีเมลมหาลัย KMUTNB <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                  <i class="fa-solid fa-envelope"></i>
+                </span>
+                <input type="email" v-model="loginEmail" required
+                       placeholder="s6603051610000@kmutnb.ac.th หรือ @email.kmutnb.ac.th"
+                       class="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-[#AC3520] focus:border-[#AC3520] outline-none text-sm dark:text-white">
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                <i class="fa-solid fa-circle-info"></i> รองรับโดเมน @kmutnb.ac.th และ @email.kmutnb.ac.th
+              </p>
+            </div>
+
+            <button type="submit" class="w-full py-4 bg-[#AC3520] hover:bg-[#8C2817] text-white font-semibold rounded-2xl shadow-lg shadow-[#AC3520]/25 transition-all flex items-center justify-center gap-2 text-base">
+              <span>ยืนยันเข้าสู่ระบบ</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+        </div>
+
+        <!-- STEP 2: FORM -->
+        <div v-else class="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 sm:p-8 md:p-10 shadow-xl border border-slate-200 dark:border-slate-800">
+
+          <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 mb-8 border-b border-slate-200 dark:border-slate-800 gap-4">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-[#AC3520] dark:text-red-400">แบบฟอร์มลงทะเบียน</span>
+              <h2 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-white">กรอกข้อมูลผู้เข้าร่วมงาน</h2>
+            </div>
+            <div class="bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
+              <i class="fa-solid fa-user-check text-[#AC3520]"></i>
+              <span class="text-xs text-slate-600 dark:text-slate-300">ใช้อีเมล: <strong class="text-slate-800 dark:text-white">{{ loggedInEmail }}</strong></span>
+            </div>
+          </div>
+
+          <form @submit.prevent="submitRegistration" class="space-y-8">
+
+            <div class="grid md:grid-cols-2 gap-6">
+
+              <!-- Full name -->
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  ชื่อ-สกุล <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-user"></i>
+                  </span>
+                  <input type="text" v-model="form.fullName" required placeholder="ตัวอย่าง: สวัสดี วันจันทร์"
+                         class="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-[#AC3520] focus:border-[#AC3520] outline-none text-sm dark:text-white">
+                </div>
+              </div>
+
+              <!-- Attendance -->
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  ความประสงค์เข้าร่วมงาน <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                  <label class="relative flex items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all"
+                         :class="form.attendance === 'เข้าร่วม' ? 'border-[#AC3520] bg-[#AC3520]/5 text-[#AC3520] font-bold' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                    <input type="radio" v-model="form.attendance" value="เข้าร่วม" class="sr-only">
+                    <i class="fa-solid fa-circle-check mr-2"></i>
+                    <span>เข้าร่วมงาน</span>
+                  </label>
+                  <label class="relative flex items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all"
+                         :class="form.attendance === 'ไม่เข้าร่วม' ? 'border-[#AC3520] bg-[#AC3520]/5 text-[#AC3520] font-bold' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                    <input type="radio" v-model="form.attendance" value="ไม่เข้าร่วม" class="sr-only">
+                    <i class="fa-solid fa-circle-xmark mr-2"></i>
+                    <span>ไม่เข้าร่วมงาน</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Year -->
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  ชั้นปี / สถานะ <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                  <button type="button" v-for="y in ['ปี 1', 'ปี 2', 'ปี 3', 'ปี 4', 'ศิษย์เก่า', 'อื่นๆ']" :key="y"
+                          @click="form.year = y"
+                          class="p-3 text-center rounded-2xl border-2 font-medium text-sm transition-all flex flex-col items-center justify-center gap-1"
+                          :class="form.year === y ? 'border-[#AC3520] bg-[#AC3520] text-white shadow-md' : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'">
+                    <span>{{ y }}</span>
+                    <span class="text-[10px] opacity-80" v-if="y === 'ปี 1' || y === 'ปี 2'">(100 บาท)</span>
+                    <span class="text-[10px] opacity-80" v-else-if="y === 'ปี 3' || y === 'ปี 4'">(ฟรี)</span>
+                    <span class="text-[10px] opacity-80" v-else>(500 บาท)</span>
+                  </button>
+                </div>
+
+                <div v-if="form.year === 'อื่นๆ'" class="mt-3">
+                  <input type="text" v-model="form.yearOther" placeholder="โปรดระบุสถานะของคุณ (เช่น อาจารย์, บุคลากร, แขกผู้มีเกียรติ)" required
+                         class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#AC3520] outline-none text-sm dark:text-white">
+                </div>
+              </div>
+
+              <!-- Transport -->
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  การเดินทางมาร่วมงาน <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <label v-for="t in ['รถยนต์ส่วนบุคคล', 'รถจักรยานยนต์', 'รถสองแถวหน้าหอสมบูรณ์', 'อื่นๆ']" :key="t"
+                         class="p-3.5 rounded-2xl border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-3"
+                         :class="form.transport === t ? 'border-[#AC3520] bg-[#AC3520]/5 text-[#AC3520]' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                    <input type="radio" v-model="form.transport" :value="t" class="sr-only">
+                    <i :class="{
+                      'fa-solid fa-car': t === 'รถยนต์ส่วนบุคคล',
+                      'fa-solid fa-motorcycle': t === 'รถจักรยานยนต์',
+                      'fa-solid fa-bus': t === 'รถสองแถวหน้าหอสมบูรณ์',
+                      'fa-solid fa-ellipsis': t === 'อื่นๆ'
+                    }"></i>
+                    <span>{{ t }}</span>
+                  </label>
+                </div>
+
+                <div v-if="form.transport === 'อื่นๆ'" class="mt-3">
+                  <input type="text" v-model="form.transportOther" placeholder="โปรดระบุวิธีการเดินทาง" required
+                         class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-[#AC3520] outline-none text-sm dark:text-white">
+                </div>
+              </div>
+
+              <!-- Allergies -->
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  แพ้อาหาร (ถ้าไม่มีให้ใส่ "-")
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-utensils"></i>
+                  </span>
+                  <input type="text" v-model="form.allergies" placeholder="เช่น กุ้ง, ปลา, ถั่ว เป็นต้น"
+                         class="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-[#AC3520] outline-none text-sm dark:text-white">
+                </div>
+              </div>
+
+              <!-- Alcohol -->
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  ดื่มเครื่องดื่มแอลกอฮอล์หรือไม่ <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label class="p-3 rounded-2xl border-2 cursor-pointer text-sm font-medium text-center transition-all"
+                         :class="form.alcohol === 'ดื่ม' ? 'border-[#AC3520] bg-[#AC3520]/5 text-[#AC3520]' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                    <input type="radio" v-model="form.alcohol" value="ดื่ม" class="sr-only">
+                    <i class="fa-solid fa-glass-cheers mr-1"></i> ดื่ม
+                  </label>
+                  <label class="p-3 rounded-2xl border-2 cursor-pointer text-sm font-medium text-center transition-all"
+                         :class="form.alcohol === 'ไม่ดื่ม' ? 'border-[#AC3520] bg-[#AC3520]/5 text-[#AC3520]' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'">
+                    <input type="radio" v-model="form.alcohol" value="ไม่ดื่ม" class="sr-only">
+                    <i class="fa-solid fa-ban mr-1"></i> ไม่ดื่ม
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Payment -->
+            <div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800">
+
+              <div v-if="calculatedFee === 0" class="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-4 text-emerald-800 dark:text-emerald-300">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl shrink-0 font-bold">
+                  <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-base">ไม่ต้องชำระค่าธรรมเนียม (0 บาท)</h4>
+                  <p class="text-xs text-emerald-600 dark:text-emerald-400">
+                    {{ form.attendance === 'ไม่เข้าร่วม' ? 'เนื่องจากท่านเลือกไม่เข้าร่วมงาน' : 'สำหรับชั้นปี 3 และ ปี 4 สามารถเข้าร่วมงานได้โดยไม่มีค่าใช้จ่าย' }}
+                  </p>
+                </div>
+              </div>
+
+              <div v-else class="space-y-6">
+
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <span class="text-xs font-semibold uppercase text-[#AC3520] dark:text-red-400">รายละเอียดการชำระเงิน</span>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-white">ยอดชำระสุทธิ: <span class="text-[#AC3520] dark:text-red-400 text-2xl font-black">{{ calculatedFee }} บาท</span></h3>
+                  </div>
+                  <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
+                    <i class="fa-solid fa-clock"></i> รอแนบหลักฐานสลีป
+                  </span>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 items-center bg-slate-50 dark:bg-slate-900/80 p-6 rounded-3xl border border-slate-200 dark:border-slate-800">
+
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                        <i class="fa-solid fa-building-columns"></i>
+                      </div>
+                      <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">ธนาคาร</p>
+                        <p class="font-bold text-slate-800 dark:text-white text-base">ธนาคารกรุงเทพ (Bangkok Bank)</p>
+                      </div>
+                    </div>
+
+                    <div class="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <div>
+                        <p class="text-xs text-slate-400">เลขที่บัญชี</p>
+                        <p class="text-xl font-mono font-extrabold text-[#AC3520] dark:text-red-400 tracking-wider">589-4-454213</p>
+                        <p class="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">ชื่อบัญชี: อาริตา บัวจีน</p>
+                      </div>
+                      <button type="button" @click="copyAccountNumber" class="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-copy"></i> คัดลอก
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-center flex flex-col items-center justify-center">
+                    <img src="data:image/jpeg;base64,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" alt="Thai QR PromptPay ชำระเงิน" class="w-56 max-w-full rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">สแกนชำระเงิน {{ calculatedFee }} บาท</p>
+                  </div>
+
+                </div>
+
+                <div class="space-y-2">
+                  <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    แนบสลีปการโอนเงิน <span class="text-red-500">*</span>
+                  </label>
+
+                  <div class="relative border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl p-6 text-center hover:border-[#AC3520] transition-colors bg-slate-50/50 dark:bg-slate-900/50">
+                    <input type="file" ref="slipInput" @change="handleFileUpload" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10" :required="calculatedFee > 0 && !form.slipPreview">
+
+                    <div v-if="!form.slipPreview" class="space-y-2 pointer-events-none">
+                      <div class="w-12 h-12 bg-[#AC3520]/10 text-[#AC3520] dark:bg-[#AC3520]/20 dark:text-red-400 rounded-full mx-auto flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                      </div>
+                      <p class="text-sm font-medium text-slate-700 dark:text-slate-200">คลิก หรือ ลากไฟล์สลีปมาวางที่นี่</p>
+                      <p class="text-xs text-slate-400">รองรับไฟล์ JPG, PNG, WEBP (ขนาดไม่เกิน 5MB)</p>
+                    </div>
+
+                    <div v-else class="flex flex-col sm:flex-row items-center justify-center gap-4 z-20 relative">
+                      <img :src="form.slipPreview" class="w-24 h-32 object-cover rounded-xl border border-slate-300 shadow-md">
+                      <div class="text-left space-y-1">
+                        <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <i class="fa-solid fa-circle-check"></i> อัปโหลดไฟล์สลีปเรียบร้อยแล้ว
+                        </p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ form.slipFileName }}</p>
+                        <button type="button" @click="removeSlip" class="text-xs text-red-500 hover:underline flex items-center gap-1 pt-1">
+                          <i class="fa-solid fa-trash"></i> เปลี่ยนไฟล์สลีป
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="pt-4">
+              <button type="submit" :disabled="submitting"
+                      class="w-full py-4 bg-[#AC3520] hover:bg-[#8C2817] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-xl shadow-[#AC3520]/30 transition-all text-lg flex items-center justify-center gap-3">
+                <i :class="submitting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-paper-plane'"></i>
+                <span>{{ submitting ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันลงทะเบียนเข้าร่วมงาน' }}</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+      </div>
+
+
+      <!-- ========================================== -->
+      <!-- TAB 2: ADMIN BACKOFFICE (needs token)      -->
+      <!-- ========================================== -->
+      <div v-if="currentTab === 'backoffice' && adminToken" class="space-y-8">
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#1E1E1E] p-6 rounded-3xl shadow-md border border-slate-200 dark:border-slate-800">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-[#AC3520] dark:text-red-400">Admin Control Panel</span>
+            <h2 class="text-2xl font-black text-slate-800 dark:text-white">ระบบหลังบ้าน และจัดการผู้ลงทะเบียน</h2>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button @click="exportToCSV" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md flex items-center gap-2 transition-all">
+              <i class="fa-solid fa-file-excel"></i>
+              <span>ส่งออกเป็น CSV</span>
+            </button>
+            <button @click="loadSubmissions" class="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-medium transition-colors" title="โหลดข้อมูลล่าสุดจาก Google Sheet">
+              <i class="fa-solid fa-rotate-right" :class="loading ? 'fa-spin' : ''"></i>
+            </button>
+            <button @click="adminLogout" class="px-3 py-2.5 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/70 text-red-600 dark:text-red-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors" title="ออกจากระบบ Admin">
+              <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
+          </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+          <div class="bg-white dark:bg-[#1E1E1E] p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-[#AC3520]/10 text-[#AC3520] dark:bg-[#AC3520]/30 dark:text-red-300 flex items-center justify-center text-xl shrink-0">
+              <i class="fa-solid fa-users"></i>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-500 dark:text-slate-400">ผู้ลงทะเบียนทั้งหมด</p>
+              <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ submissions.length }} คน</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#1E1E1E] p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-500 dark:text-slate-400">เข้าร่วมงาน</p>
+              <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ attendingCount }} คน</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#1E1E1E] p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+              <i class="fa-solid fa-baht-sign"></i>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-slate-500 dark:text-slate-400">รายรับรวม</p>
+              <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ totalRevenue.toLocaleString() }} บาท</h3>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-[#1E1E1E] p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center justify-between">
+              <span>กระจายสีทีม</span>
+              <i class="fa-solid fa-palette text-slate-400"></i>
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300">ฟ้า: {{ teamCounts['สีฟ้า'] }}</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">เหลือง: {{ teamCounts['สีเหลือง'] }}</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">เขียว: {{ teamCounts['สีเขียว'] }}</span>
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300">แดง: {{ teamCounts['สีแดง'] }}</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white dark:bg-[#1E1E1E] rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+
+          <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row gap-4 items-center justify-between">
+
+            <div class="relative w-full md:w-80">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </span>
+              <input type="text" v-model="searchQuery" placeholder="ค้นหาตามชื่อ, อีเมล, Seat ID..."
+                     class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-[#AC3520] outline-none dark:text-white">
+            </div>
+
+            <div class="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+              <select v-model="filterYear" class="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium dark:text-white outline-none">
+                <option value="ALL">ชั้นปีทั้งหมด</option>
+                <option value="ปี 1">ปี 1</option>
+                <option value="ปี 2">ปี 2</option>
+                <option value="ปี 3">ปี 3</option>
+                <option value="ปี 4">ปี 4</option>
+                <option value="ศิษย์เก่า">ศิษย์เก่า</option>
+                <option value="อื่นๆ">อื่นๆ</option>
+              </select>
+
+              <select v-model="filterTeam" class="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium dark:text-white outline-none">
+                <option value="ALL">สีทีมทั้งหมด</option>
+                <option value="สีฟ้า">สีฟ้า</option>
+                <option value="สีเหลือง">สีเหลือง</option>
+                <option value="สีเขียว">สีเขียว</option>
+                <option value="สีแดง">สีแดง</option>
+              </select>
+            </div>
+
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 uppercase text-[11px] font-bold tracking-wider">
+                <tr>
+                  <th class="py-4 px-6">Seat ID</th>
+                  <th class="py-4 px-6">ชื่อ-สกุล & อีเมล</th>
+                  <th class="py-4 px-6">ชั้นปี</th>
+                  <th class="py-4 px-6">เข้าร่วม?</th>
+                  <th class="py-4 px-6">สีทีม (สุ่ม)</th>
+                  <th class="py-4 px-6">ชำระเงิน</th>
+                  <th class="py-4 px-6">สลีป</th>
+                  <th class="py-4 px-6 text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                <tr v-for="item in filteredSubmissions" :key="item.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+
+                  <td class="py-4 px-6 font-mono font-bold text-[#AC3520] dark:text-red-400">{{ item.seatNo }}</td>
+
+                  <td class="py-4 px-6">
+                    <div class="font-bold text-slate-800 dark:text-white">{{ item.fullName }}</div>
+                    <div class="text-xs text-slate-400 font-mono">{{ item.email }}</div>
+                  </td>
+
+                  <td class="py-4 px-6">
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      {{ item.year === 'อื่นๆ' ? item.yearOther : item.year }}
+                    </span>
+                  </td>
+
+                  <td class="py-4 px-6">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                          :class="item.attendance === 'เข้าร่วม' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'">
+                      {{ item.attendance }}
+                    </span>
+                  </td>
+
+                  <td class="py-4 px-6">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm"
+                          :style="{ backgroundColor: getTeamHex(item.teamColor) }">
+                      <i class="fa-solid fa-shirt"></i> {{ item.teamColor }}
+                    </span>
+                  </td>
+
+                  <td class="py-4 px-6 font-semibold">
+                    <span v-if="item.fee > 0" class="text-slate-800 dark:text-white">{{ item.fee }} บาท</span>
+                    <span v-else class="text-xs text-emerald-600 dark:text-emerald-400">ฟรี (0 บาท)</span>
+                  </td>
+
+                  <td class="py-4 px-6">
+                    <button v-if="item.slipFileId" @click="viewSlipModal(item)" class="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300 rounded-lg hover:underline flex items-center gap-1 font-medium">
+                      <i class="fa-solid fa-image"></i> ดูสลีป
+                    </button>
+                    <span v-else-if="item.fee > 0" class="text-xs text-amber-500 font-medium">ไม่มีสลีป</span>
+                    <span v-else class="text-xs text-slate-400">-</span>
+                  </td>
+
+                  <td class="py-4 px-6 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <button @click="openTicketModal(item)" class="p-2 text-slate-600 hover:text-[#AC3520] dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" title="ดูการ์ดเชิญ">
+                        <i class="fa-solid fa-ticket"></i>
+                      </button>
+                      <button @click="editItem(item)" class="p-2 text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" title="แก้ไขข้อมูล">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button @click="confirmDelete(item)" class="p-2 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" title="ลบข้อมูล">
+                        <i class="fa-solid fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+
+                </tr>
+
+                <tr v-if="loading && submissions.length === 0">
+                  <td colspan="8" class="text-center py-12 text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-2 block"></i>
+                    กำลังโหลดข้อมูล...
+                  </td>
+                </tr>
+                <tr v-else-if="filteredSubmissions.length === 0">
+                  <td colspan="8" class="text-center py-12 text-slate-400">
+                    <i class="fa-solid fa-inbox text-4xl mb-2 block"></i>
+                    ไม่พบข้อมูลผู้ลงทะเบียน
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+
+    <!-- MODAL 0: ADMIN LOGIN -->
+    <div v-if="showAdminLogin" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <form @submit.prevent="adminLogin" class="bg-white dark:bg-[#1E1E1E] rounded-3xl p-6 sm:p-8 w-full max-w-sm space-y-5 shadow-2xl border border-slate-200 dark:border-slate-800">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-[#AC3520]/10 text-[#AC3520] dark:bg-[#AC3520]/30 dark:text-red-300 flex items-center justify-center text-xl">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <h3 class="font-bold text-lg text-slate-800 dark:text-white">เข้าสู่ระบบ Admin</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">เฉพาะผู้ดูแลระบบเท่านั้น</p>
+        </div>
+        <input type="password" v-model="adminPassword" required autofocus placeholder="รหัสผ่าน Admin"
+               class="w-full p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#AC3520]">
+        <div class="flex justify-end gap-2">
+          <button type="button" @click="cancelAdminLogin" class="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold">ยกเลิก</button>
+          <button type="submit" :disabled="loading" class="px-5 py-2.5 bg-[#AC3520] hover:bg-[#8C2817] disabled:opacity-60 text-white rounded-xl text-xs font-semibold shadow-md">
+            {{ loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+
+    <!-- MODAL 1: TICKET -->
+    <div v-if="activeTicket" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white dark:bg-[#1E1E1E] rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+
+        <div class="p-4 bg-slate-100 dark:bg-slate-800 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <i class="fa-solid fa-circle-check text-base"></i>
+            <span>บันทึกการลงทะเบียนเรียบร้อยแล้ว</span>
+          </div>
+          <button @click="activeTicket = null" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 flex items-center justify-center hover:bg-slate-300">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+
+          <div class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl overflow-hidden shadow-2xl border border-slate-700">
+
+            <div class="bg-[#AC3520] p-4 sm:p-5 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <i class="fa-solid fa-trophy text-amber-300 text-2xl"></i>
+                <div>
+                  <h3 class="font-black text-lg tracking-wider">ILET SPORTS DAY PASS</h3>
+                  <p class="text-[11px] text-red-100 uppercase tracking-widest">การ์ดเชิญลงทะเบียนเข้างาน</p>
+                </div>
+              </div>
+              <div class="text-right font-mono font-bold text-amber-300 text-lg">{{ activeTicket.seatNo }}</div>
+            </div>
+
+            <div class="p-6 grid sm:grid-cols-3 gap-6 relative">
+
+              <div class="sm:col-span-2 space-y-4">
+
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase tracking-widest">PASSENGER NAME / ชื่อผู้เข้าร่วม</span>
+                  <p class="text-2xl font-black text-amber-300 truncate">{{ activeTicket.fullName }}</p>
+                  <p class="text-xs text-slate-300 font-mono">{{ activeTicket.email }}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <span class="text-[10px] text-slate-400 uppercase">ACADEMIC YEAR / ชั้นปี</span>
+                    <p class="text-sm font-bold text-white">{{ activeTicket.year === 'อื่นๆ' ? activeTicket.yearOther : activeTicket.year }}</p>
+                  </div>
+
+                  <div>
+                    <span class="text-[10px] text-slate-400 uppercase">TEAM COLOR / สีทีมที่ได้</span>
+                    <div>
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md mt-0.5"
+                            :style="{ backgroundColor: getTeamHex(activeTicket.teamColor) }">
+                        <i class="fa-solid fa-shirt"></i> {{ activeTicket.teamColor }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-1 pt-2 border-t border-slate-700/60 text-xs text-slate-300">
+                  <p><i class="fa-solid fa-location-dot text-amber-400 mr-1.5"></i> สวนสุภัทราแลนด์ อ.บ้านค่าย จ.ระยอง</p>
+                  <p><i class="fa-solid fa-clock text-amber-400 mr-1.5"></i> เวลา 18.00 น. - 00.00 น.</p>
+                  <p><i class="fa-solid fa-bus text-amber-400 mr-1.5"></i> การเดินทาง: {{ activeTicket.transport === 'อื่นๆ' ? activeTicket.transportOther : activeTicket.transport }}</p>
+                  <p><i class="fa-solid fa-utensils text-amber-400 mr-1.5"></i> แพ้อาหาร: {{ activeTicket.allergies || '-' }}</p>
+                </div>
+
+              </div>
+
+              <div class="flex flex-col items-center justify-between border-t sm:border-t-0 sm:border-l border-slate-700/80 pt-4 sm:pt-0 sm:pl-6 text-center">
+                <div class="space-y-2">
+                  <span class="text-[10px] text-slate-400 uppercase tracking-widest">SCAN ENTRY</span>
+                  <div class="w-28 h-28 bg-white p-2 rounded-2xl mx-auto flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-qrcode text-6xl text-slate-900"></i>
+                  </div>
+                  <p class="text-[10px] font-mono text-slate-400">REF: {{ activeTicket.id }}</p>
+                </div>
+
+                <div class="pt-3">
+                  <span class="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider"
+                        :class="activeTicket.attendance === 'เข้าร่วม' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'">
+                    {{ activeTicket.attendance }}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-3">
+            <button @click="printTicket" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-print"></i> พิมพ์การ์ดเชิญ
+            </button>
+            <button @click="activeTicket = null" class="px-5 py-2.5 bg-[#AC3520] hover:bg-[#8C2817] text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md">
+              เสร็จสิ้น
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- MODAL 2: EDIT -->
+    <div v-if="editingItem" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white dark:bg-[#1E1E1E] rounded-3xl max-w-xl w-full shadow-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6">
+
+        <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700">
+          <h3 class="text-xl font-bold text-slate-800 dark:text-white">แก้ไขข้อมูลผู้ลงทะเบียน (Seat: {{ editingItem.seatNo }})</h3>
+          <button @click="editingItem = null" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">ชื่อ-สกุล</label>
+            <input type="text" v-model="editingItem.fullName" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#AC3520]">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">ชั้นปี</label>
+              <select v-model="editingItem.year" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none">
+                <option value="ปี 1">ปี 1</option>
+                <option value="ปี 2">ปี 2</option>
+                <option value="ปี 3">ปี 3</option>
+                <option value="ปี 4">ปี 4</option>
+                <option value="ศิษย์เก่า">ศิษย์เก่า</option>
+                <option value="อื่นๆ">อื่นๆ</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">เข้าร่วมงาน?</label>
+              <select v-model="editingItem.attendance" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none">
+                <option value="เข้าร่วม">เข้าร่วม</option>
+                <option value="ไม่เข้าร่วม">ไม่เข้าร่วม</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">สีทีม (สุ่มไว้)</label>
+              <select v-model="editingItem.teamColor" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none">
+                <option value="สีฟ้า">สีฟ้า</option>
+                <option value="สีเหลือง">สีเหลือง</option>
+                <option value="สีเขียว">สีเขียว</option>
+                <option value="สีแดง">สีแดง</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">ยอดชำระเงิน (บาท)</label>
+              <input type="number" v-model.number="editingItem.fee" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">แพ้อาหาร</label>
+            <input type="text" v-model="editingItem.allergies" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <button @click="editingItem = null" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold">ยกเลิก</button>
+          <button @click="saveEdit" class="px-5 py-2 bg-[#AC3520] text-white rounded-xl text-xs font-semibold shadow-md">บันทึกการแก้ไข</button>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- MODAL 3: SLIP -->
+    <div v-if="activeSlipModal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-[#1E1E1E] rounded-3xl max-w-md w-full shadow-2xl p-6 text-center space-y-4">
+        <div class="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-700">
+          <h4 class="font-bold text-slate-800 dark:text-white">หลักฐานสลีปการโอนเงิน ({{ activeSlipModal.fullName }})</h4>
+          <button @click="activeSlipModal = null" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <img :src="activeSlipModal.slipPreview" class="max-h-96 mx-auto rounded-2xl border shadow-md">
+        <button @click="activeSlipModal = null" class="px-5 py-2 bg-[#AC3520] text-white rounded-xl text-xs font-semibold">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+
+
+    <footer class="bg-white dark:bg-[#1E1E1E] border-t border-slate-200 dark:border-slate-800 py-6 mt-12">
+      <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1">
+        <p>© 2026 ILET Sports Day Event Registration. มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (KMUTNB)</p>
+        <p class="text-[11px] text-slate-400">ธีมสีหลัก #AC3520 & #FFFFFF • พัฒนาขึ้นสำหรับการลงทะเบียนเข้างานกีฬาสี ILET</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // ตั้งค่า: วาง Web app URL ที่ได้จาก Google Apps Script (Deploy > Web app)
+    // ============================================================
+    const API_URL = 'https://script.google.com/macros/s/AKfycbybA2wNaWZJHBbLD7qxbT_SV9cgWm9YnBXwnPeYTqcof1UX_b4PVkdDzbTsoI9jjfwO/exec';
+
+    const api = async (payload) => {
+      if (!API_URL.startsWith('https://')) throw new Error('ยังไม่ได้ตั้งค่า API_URL ในไฟล์ HTML');
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // เลี่ยง CORS preflight
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+      return data;
+    };
+
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        const isDarkMode = ref(false);
+        const currentTab = ref('register');
+        const loading = ref(false);
+        const submitting = ref(false);
+
+        // Toast
+        const toast = ref({ show: false, message: '', type: 'success' });
+        let toastTimer = null;
+        const showToast = (message, type = 'success') => {
+          toast.value = { show: true, message, type };
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => { toast.value.show = false; }, 4000);
+        };
+
+        const toggleDarkMode = () => {
+          isDarkMode.value = !isDarkMode.value;
+          document.documentElement.classList.toggle('dark', isDarkMode.value);
+        };
+
+        // User login (KMUTNB email)
+        const isLoggedIn = ref(false);
+        const loginEmail = ref('');
+        const loggedInEmail = ref('');
+
+        const validateKmutnbEmail = (email) =>
+          /^[a-zA-Z0-9._%+-]+@(kmutnb\.ac\.th|email\.kmutnb\.ac\.th)$/i.test(email.trim());
+
+        const handleLogin = () => {
+          if (!validateKmutnbEmail(loginEmail.value)) {
+            showToast('กรุณาใช้อีเมลมหาลัย KMUTNB (@kmutnb.ac.th หรือ @email.kmutnb.ac.th)', 'error');
+            return;
+          }
+          loggedInEmail.value = loginEmail.value.trim().toLowerCase();
+          isLoggedIn.value = true;
+          showToast(`เข้าสู่ระบบสำเร็จด้วยอีเมล ${loggedInEmail.value}`);
+        };
+
+        const logout = () => {
+          isLoggedIn.value = false;
+          loginEmail.value = '';
+          loggedInEmail.value = '';
+          showToast('ออกจากระบบเรียบร้อย');
+        };
+
+        // Form
+        const form = ref({
+          fullName: '', year: 'ปี 1', yearOther: '', attendance: 'เข้าร่วม',
+          transport: 'รถยนต์ส่วนบุคคล', transportOther: '', allergies: '', alcohol: 'ไม่ดื่ม',
+          slipFile: null, slipPreview: null, slipFileName: ''
+        });
+
+        // ค่าธรรมเนียมนี้ใช้แสดงผลเท่านั้น เซิร์ฟเวอร์คำนวณซ้ำเองเสมอ
+        const calculatedFee = computed(() => {
+          if (form.value.attendance === 'ไม่เข้าร่วม') return 0;
+          if (form.value.year === 'ปี 1' || form.value.year === 'ปี 2') return 100;
+          if (form.value.year === 'ปี 3' || form.value.year === 'ปี 4') return 0;
+          return 500;
+        });
+
+        const handleFileUpload = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 5 * 1024 * 1024) {
+            showToast('ไฟล์สลีปต้องมีขนาดไม่เกิน 5MB', 'error');
+            e.target.value = '';
+            return;
+          }
+          form.value.slipFile = file;
+          form.value.slipFileName = file.name;
+          const reader = new FileReader();
+          reader.onload = (ev) => { form.value.slipPreview = ev.target.result; };
+          reader.readAsDataURL(file);
+        };
+
+        const removeSlip = () => {
+          form.value.slipFile = null;
+          form.value.slipPreview = null;
+          form.value.slipFileName = '';
+        };
+
+        const copyAccountNumber = () => {
+          const text = '5894454213';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).catch(() => {});
+          } else {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+          }
+          showToast('คัดลอกเลขบัญชี 589-4-454213 เรียบร้อยแล้ว!');
+        };
+
+        const getTeamHex = (colorName) => ({
+          'สีฟ้า': '#0284C7', 'สีเหลือง': '#D97706', 'สีเขียว': '#16A34A', 'สีแดง': '#DC2626'
+        }[colorName] || '#AC3520');
+
+        // Data (โหลดจาก Google Sheet เฉพาะตอน admin ล็อกอิน)
+        const submissions = ref([]);
+        const activeTicket = ref(null);
+
+        const submitRegistration = async () => {
+          if (submitting.value) return;
+          if (!form.value.fullName.trim()) { showToast('กรุณากรอกชื่อ-สกุล', 'error'); return; }
+          if (calculatedFee.value > 0 && !form.value.slipPreview) {
+            showToast('กรุณาแนบสลีปหลักฐานการโอนเงิน', 'error');
+            return;
+          }
+
+          submitting.value = true;
+          try {
+            const f = form.value;
+            const r = await api({
+              action: 'register',
+              email: loggedInEmail.value,
+              fullName: f.fullName,
+              year: f.year,
+              yearOther: f.yearOther,
+              attendance: f.attendance,
+              transport: f.transport,
+              transportOther: f.transportOther,
+              allergies: f.allergies,
+              alcohol: f.alcohol,
+              slip: calculatedFee.value > 0 ? f.slipPreview : null,
+              slipName: f.slipFileName
+            });
+
+            activeTicket.value = r.record;
+            showToast(`ลงทะเบียนสำเร็จ! ได้รับ ${r.record.teamColor} และรหัสที่นั่ง ${r.record.seatNo}`);
+
+            f.fullName = ''; f.year = 'ปี 1'; f.yearOther = ''; f.attendance = 'เข้าร่วม';
+            f.transport = 'รถยนต์ส่วนบุคคล'; f.transportOther = ''; f.allergies = ''; f.alcohol = 'ไม่ดื่ม';
+            removeSlip();
+          } catch (e) {
+            showToast(e.message, 'error');
+          } finally {
+            submitting.value = false;
+          }
+        };
+
+        // Admin auth
+        const adminToken = ref(sessionStorage.getItem('ilet_admin') || '');
+        const showAdminLogin = ref(false);
+        const adminPassword = ref('');
+
+        const clearAdminSession = () => {
+          adminToken.value = '';
+          sessionStorage.removeItem('ilet_admin');
+          submissions.value = [];
+        };
+
+        const loadSubmissions = async () => {
+          loading.value = true;
+          try {
+            submissions.value = (await api({ action: 'list', token: adminToken.value })).rows;
+          } catch (e) {
+            if (e.message === 'UNAUTHORIZED') {
+              clearAdminSession();
+              showAdminLogin.value = true;
+              showToast('เซสชัน Admin หมดอายุ กรุณาเข้าสู่ระบบใหม่', 'error');
+            } else {
+              showToast(e.message, 'error');
+            }
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        const openBackofficeTab = () => {
+          currentTab.value = 'backoffice';
+          if (!adminToken.value) { showAdminLogin.value = true; return; }
+          loadSubmissions();
+        };
+
+        const adminLogin = async () => {
+          loading.value = true;
+          try {
+            const r = await api({ action: 'login', password: adminPassword.value });
+            adminToken.value = r.token;
+            sessionStorage.setItem('ilet_admin', r.token);
+            adminPassword.value = '';
+            showAdminLogin.value = false;
+            loadSubmissions();
+          } catch (e) {
+            showToast(e.message, 'error');
+            loading.value = false;
+          }
+        };
+
+        const cancelAdminLogin = () => {
+          showAdminLogin.value = false;
+          adminPassword.value = '';
+          currentTab.value = 'register';
+        };
+
+        const adminLogout = () => {
+          clearAdminSession();
+          currentTab.value = 'register';
+          showToast('ออกจากระบบ Admin เรียบร้อย');
+        };
+
+        // Filters & stats
+        const searchQuery = ref('');
+        const filterYear = ref('ALL');
+        const filterTeam = ref('ALL');
+
+        const filteredSubmissions = computed(() => {
+          const q = searchQuery.value.toLowerCase();
+          return submissions.value.filter(item => {
+            const matchesSearch = String(item.fullName).toLowerCase().includes(q) ||
+                                  String(item.email).toLowerCase().includes(q) ||
+                                  String(item.seatNo).toLowerCase().includes(q);
+            const matchesYear = filterYear.value === 'ALL' || item.year === filterYear.value;
+            const matchesTeam = filterTeam.value === 'ALL' || item.teamColor === filterTeam.value;
+            return matchesSearch && matchesYear && matchesTeam;
+          });
+        });
+
+        const attendingCount = computed(() => submissions.value.filter(s => s.attendance === 'เข้าร่วม').length);
+        const totalRevenue = computed(() => submissions.value.reduce((acc, s) => acc + (Number(s.fee) || 0), 0));
+
+        const teamCounts = computed(() => {
+          const counts = { 'สีฟ้า': 0, 'สีเหลือง': 0, 'สีเขียว': 0, 'สีแดง': 0 };
+          submissions.value.forEach(s => { if (counts[s.teamColor] !== undefined) counts[s.teamColor]++; });
+          return counts;
+        });
+
+        // Admin actions
+        const activeSlipModal = ref(null);
+        const viewSlipModal = async (item) => {
+          try {
+            const r = await api({ action: 'slip', token: adminToken.value, id: item.slipFileId });
+            activeSlipModal.value = { ...item, slipPreview: r.data };
+          } catch (e) { showToast(e.message, 'error'); }
+        };
+
+        const openTicketModal = (item) => { activeTicket.value = item; };
+
+        const editingItem = ref(null);
+        const editItem = (item) => { editingItem.value = JSON.parse(JSON.stringify(item)); };
+
+        const saveEdit = async () => {
+          try {
+            await api({ action: 'update', token: adminToken.value, record: editingItem.value });
+            showToast(`แก้ไขข้อมูลของ ${editingItem.value.fullName} เรียบร้อยแล้ว`);
+            editingItem.value = null;
+            loadSubmissions();
+          } catch (e) { showToast(e.message, 'error'); }
+        };
+
+        const confirmDelete = async (item) => {
+          if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลการลงทะเบียนของ ${item.fullName} (${item.seatNo})?`)) return;
+          try {
+            await api({ action: 'delete', token: adminToken.value, id: item.id });
+            showToast('ลบข้อมูลเรียบร้อยแล้ว', 'error');
+            loadSubmissions();
+          } catch (e) { showToast(e.message, 'error'); }
+        };
+
+        // CSV export (UTF-8 BOM สำหรับภาษาไทยใน Excel/Google Sheets)
+        const csvCell = (v) => {
+          let s = String(v ?? '');
+          if (/^[=+\-@]/.test(s)) s = "'" + s; // กัน formula injection
+          return `"${s.replace(/"/g, '""')}"`;
+        };
+
+        const exportToCSV = () => {
+          if (submissions.value.length === 0) { showToast('ไม่มีข้อมูลสำหรับส่งออก', 'error'); return; }
+
+          let csv = '\uFEFF';
+          csv += 'รหัสที่นั่ง,ชื่อ-สกุล,อีเมล,ชั้นปี,ระบุชั้นปีอื่น,ความประสงค์เข้าร่วม,การเดินทาง,ระบุการเดินทางอื่น,แพ้อาหาร,เครื่องดื่ม,สีทีมที่ได้,ยอดชำระ(บาท),วันที่ลงทะเบียน\n';
+          submissions.value.forEach(i => {
+            csv += [i.seatNo, i.fullName, i.email, i.year, i.yearOther || '-', i.attendance, i.transport,
+                    i.transportOther || '-', i.allergies || '-', i.alcohol, i.teamColor, i.fee, i.registeredAt]
+                    .map(csvCell).join(',') + '\n';
+          });
+
+          const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `ILET_SportsDay_Registrations_${new Date().toISOString().slice(0, 10)}.csv`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('ส่งออกไฟล์ CSV เรียบร้อย!');
+        };
+
+        const printTicket = () => window.print();
+
+        return {
+          isDarkMode, toggleDarkMode, currentTab, toast, loading, submitting,
+          isLoggedIn, loginEmail, loggedInEmail, handleLogin, logout,
+          form, calculatedFee, handleFileUpload, removeSlip, copyAccountNumber, submitRegistration,
+          submissions, activeTicket, searchQuery, filterYear, filterTeam, filteredSubmissions,
+          attendingCount, totalRevenue, teamCounts, getTeamHex,
+          adminToken, showAdminLogin, adminPassword, adminLogin, cancelAdminLogin, adminLogout,
+          loadSubmissions, openBackofficeTab,
+          activeSlipModal, viewSlipModal, openTicketModal, editingItem, editItem, saveEdit, confirmDelete,
+          exportToCSV, printTicket
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
